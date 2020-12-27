@@ -1,6 +1,6 @@
 #version 330
-in layout(location = 0) vec3 position;
-in layout(location = 1) vec2 textureCoords;
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec2 textureCoords;
 
 uniform mat4 transform;
 

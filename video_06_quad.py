@@ -9,6 +9,10 @@ def main():
     # initialize glfw
     if not glfw.init():
         return
+    glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+    glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+    glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)
 
     window = glfw.create_window(800, 600, "My OpenGL window", None, None)
 
@@ -53,6 +57,10 @@ def main():
         outColor = vec4(newColor, 1.0f);
     }
     """
+
+    VAO = glGenVertexArrays(1)
+    glBindVertexArray(VAO)
+
     shader = OpenGL.GL.shaders.compileProgram(OpenGL.GL.shaders.compileShader(vertex_shader, GL_VERTEX_SHADER),
                                               OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER))
 
@@ -72,8 +80,9 @@ def main():
     glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
     glEnableVertexAttribArray(color)
 
-
-    glUseProgram(shader)
+    glBindVertexArray(0)
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+    glBindBuffer(GL_ARRAY_BUFFER, 0)
 
     glClearColor(0.2, 0.3, 0.2, 1.0)
 
@@ -81,10 +90,18 @@ def main():
         glfw.poll_events()
 
         glClear(GL_COLOR_BUFFER_BIT)
-
+        
+        glUseProgram(shader)
+        glBindVertexArray(VAO)
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, None)
+        glBindVertexArray(0)
+        glUseProgram(0)
 
         glfw.swap_buffers(window)
+
+    glDeleteProgram(shader)
+    glDeleteVertexArrays(1, [VAO])
+    glDeleteBuffers(2, [VBO, EBO])
 
     glfw.terminate()
 

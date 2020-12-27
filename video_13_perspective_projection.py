@@ -14,9 +14,12 @@ def main():
     if not glfw.init():
         return
 
-    w_width, w_height = 800, 600
+    glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+    glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+    glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)
 
-    #glfw.window_hint(glfw.RESIZABLE, GL_FALSE)
+    w_width, w_height = 800, 600
 
     window = glfw.create_window(w_width, w_height, "My OpenGL window", None, None)
 
@@ -71,9 +74,11 @@ def main():
 
     vertex_shader = """
     #version 330
-    in layout(location = 0) vec3 position;
-    in layout(location = 1) vec3 color;
-    in layout(location = 2) vec2 textureCoords;
+    
+    layout(location = 0) in vec3 position;
+    layout(location = 1) in vec3 color;
+    layout(location = 2) in vec2 textureCoords;
+
     uniform mat4 transform;
 
     uniform mat4 view;
@@ -102,6 +107,10 @@ def main():
         outColor = texture(samplerTexture, newTexture); //* vec4(newColor, 1.0f);
     }
     """
+
+    VAO = glGenVertexArrays(1)
+    glBindVertexArray(VAO)
+
     shader = OpenGL.GL.shaders.compileProgram(OpenGL.GL.shaders.compileShader(vertex_shader, GL_VERTEX_SHADER),
                                               OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER))
 
@@ -116,13 +125,18 @@ def main():
     #position
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, cube.itemsize * 8, ctypes.c_void_p(0))
     glEnableVertexAttribArray(0)
+    
     #color
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, cube.itemsize * 8, ctypes.c_void_p(12))
     glEnableVertexAttribArray(1)
+    
     #texture
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, cube.itemsize * 8, ctypes.c_void_p(24))
     glEnableVertexAttribArray(2)
 
+    glBindVertexArray(0)
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+    glBindBuffer(GL_ARRAY_BUFFER, 0)
 
     texture = glGenTextures(1)
     glBindTexture(GL_TEXTURE_2D, texture)
@@ -136,19 +150,16 @@ def main():
     image = Image.open("res/crate.jpg")
     img_data = numpy.array(list(image.getdata()), numpy.uint8)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, img_data)
-    glEnable(GL_TEXTURE_2D)
-
-
-    glUseProgram(shader)
-
+    
     glClearColor(0.2, 0.3, 0.2, 1.0)
     glEnable(GL_DEPTH_TEST)
-    #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+    
 
     view = pyrr.matrix44.create_from_translation(pyrr.Vector3([0.0, 0.0, -3.0]))
     projection = pyrr.matrix44.create_perspective_projection_matrix(45.0, w_width / w_height, 0.1, 100.0)
     model = pyrr.matrix44.create_from_translation(pyrr.Vector3([0.0, 0.0, 0.0]))
 
+    glUseProgram(shader)
     view_loc = glGetUniformLocation(shader, "view")
     proj_loc = glGetUniformLocation(shader, "projection")
     model_loc = glGetUniformLocation(shader, "model")
@@ -156,7 +167,7 @@ def main():
     glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
     glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
-
+    glUseProgram(0)
 
 
     while not glfw.window_should_close(window):
@@ -167,12 +178,21 @@ def main():
         rot_x = pyrr.Matrix44.from_x_rotation(0.5 * glfw.get_time() )
         rot_y = pyrr.Matrix44.from_y_rotation(0.8 * glfw.get_time() )
 
+        glUseProgram(shader)
         transformLoc = glGetUniformLocation(shader, "transform")
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, rot_x * rot_y)
-
+        
+        glBindVertexArray(VAO)
         glDrawElements(GL_TRIANGLES, len(indices), GL_UNSIGNED_INT, None)
+        glBindVertexArray(0)
+
+        glUseProgram(0)
 
         glfw.swap_buffers(window)
+
+    glDeleteProgram(shader)
+    glDeleteVertexArrays(1, [VAO])
+    glDeleteBuffers(2, [VBO, EBO])
 
     glfw.terminate()
 
